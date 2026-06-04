@@ -35,9 +35,10 @@
 | Props atlas / ZIP manifest | Props 子流程 | `props package` |
 | BYOK / 自定义 provider | 全部子流程 | `providers validate`、`image call`、`text call`、`review call` |
 | Codex App imagegen | 全部图像生成子流程 | `prompt ... --emit codex` 后调用 `$imagegen` |
+| 工程化结构审计 | 全部子流程 | `audit coverage` |
 
 审计命令：
 
 ```bash
-python3 scripts/image_extender_skill.py audit coverage --root .
+python scripts/image_extender_skill.py audit coverage --root .
 ```

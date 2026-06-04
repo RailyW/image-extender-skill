@@ -5,7 +5,7 @@ description: "Use this skill to run the Image Extender workflows inside Codex in
 
 # Image Extender Studio Skill
 
-本 Skill 把原 Web 工作台拆成 Codex 可执行工作流：Markdown 负责编排和选择路径，`scripts/image_extender_skill.py` 负责固定步骤、算法、provider 调用、图像后处理和导出。不要让 LLM 临场重写切图、色键、导出、manifest 或 provider 适配逻辑；这些步骤必须调用脚本。
+本 Skill 把原 Web 工作台拆成 Codex 可执行工作流：Markdown 负责编排和选择路径，`scripts/image_extender_skill.py` 保持兼容入口，实际实现位于 `scripts/image_extender_studio/` 包。不要让 LLM 临场重写切图、色键、导出、manifest 或 provider 适配逻辑；这些步骤必须调用脚本。
 
 ## 何时使用
 
@@ -47,19 +47,38 @@ description: "Use this skill to run the Image Extender workflows inside Codex in
 - Props 装饰库：读 [subskill-props.md](references/subskill-props.md)。
 - 功能覆盖审计：读 [feature-map.md](references/feature-map.md)。
 
+## 工程化模块导航
+
+Python 实现已经按职责拆分：
+
+- `scripts/image_extender_skill.py`：兼容入口，只负责调用包内 CLI。
+- `scripts/image_extender_studio/core/`：常量、数据模型和通用 IO。
+- `scripts/image_extender_studio/providers/`：BYOK / 自定义 provider 协议适配。
+- `scripts/image_extender_studio/prompts/`：各子流程稳定 prompt 构造。
+- `scripts/image_extender_studio/imaging/`：跨工作流复用的像素和打包工具。
+- `scripts/image_extender_studio/workflows/`：extender、parallax、tileset、sprite、props 的确定性处理流程。
+- `scripts/image_extender_studio/cli/`：命令树与命令分派。
+- `scripts/image_extender_studio/audit/`：文件结构和关键能力覆盖审计。
+
+新增或修改功能时，同步更新根 `README.md`、本 `SKILL.md`、对应 `references/subskill-*.md` 和相关模块 README。
+
 ## 常用脚本入口
 
 所有命令都从 skill 目录运行，或显式传入脚本绝对路径：
 
 ```bash
-python3 scripts/image_extender_skill.py --help
-python3 scripts/image_extender_skill.py providers validate --config providers.example.json
-python3 scripts/image_extender_skill.py prompt generate --mode tileset --prompt "mossy stone platform"
-python3 scripts/image_extender_skill.py tileset guide --output outputs/tile-guide.png
-python3 scripts/image_extender_skill.py sprite process --sheet generated.png --body-plan biped --anim idle --output-dir outputs/sprite --vertical-anchor baseline --horizontal-anchor upper-q75
+python scripts/image_extender_skill.py --help
+python scripts/image_extender_skill.py providers validate --config providers.example.json
+python scripts/image_extender_skill.py prompt generate --mode tileset --prompt "mossy stone platform"
+python scripts/image_extender_skill.py tileset guide --output outputs/tile-guide.png
+python scripts/image_extender_skill.py sprite process --sheet generated.png --body-plan biped --anim idle --output-dir outputs/sprite --vertical-anchor baseline --horizontal-anchor upper-q75
 ```
 
 图像后处理命令需要 Pillow；Codex App 的内置 Python 通常可用，普通系统 Python 缺少时脚本会给出安装提示。
+
+## Agents 自动安装提示词
+
+当用户希望把安装工作交给另一个尚未安装本 Skill 的 agent 时，让用户复制根 [README.md](README.md) 中的“复制给 Agents 自动安装”整段文本。那段文本本身就是功能入口，不依赖任何本仓库脚本或 `$image-extender-studio` 已存在；它会指示对方 agent 直接从仓库获取内容并复制到自己的 skill 目录。
 
 ## Codex App imagegen 路径
 
@@ -77,9 +96,9 @@ Python 脚本不能直接调用 Codex App 的工具，因此 Skill 的 Markdown 
 交付前至少执行：
 
 ```bash
-python3 -m py_compile scripts/image_extender_skill.py
-python3 scripts/image_extender_skill.py audit coverage --root .
-python3 scripts/image_extender_skill.py --help
+python -m compileall -q scripts
+python scripts/image_extender_skill.py audit coverage --root .
+python scripts/image_extender_skill.py --help
 ```
 
 若修改了原 Web 应用代码，再额外运行项目构建命令。

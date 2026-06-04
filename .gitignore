@@ -1,0 +1,13 @@
+# 本地 agent 指令只用于当前工作区，不进入仓库历史。
+AGENTS.md
+
+# Codex / TDD 临时测试必须放在独立目录，并保持不跟踪。
+.codex-tdd-tests/
+
+# Python 运行产物。
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+docs/superpowers
+

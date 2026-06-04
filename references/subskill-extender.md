@@ -18,9 +18,9 @@
 ## 关键命令
 
 ```bash
-python3 scripts/image_extender_skill.py extend prepare --input base.png --direction right --amount 512 --output expanded.png
-python3 scripts/image_extender_skill.py prompt extend --input expanded.png --direction right --amount 512 --prompt "continue the forest" --output prompt.txt
-python3 scripts/image_extender_skill.py extend apply-result --original base.png --expanded expanded.png --generated generated.png --direction right --amount 512 --output final.png
+python scripts/image_extender_skill.py extend prepare --input base.png --direction right --amount 512 --output expanded.png
+python scripts/image_extender_skill.py prompt extend --input expanded.png --direction right --amount 512 --prompt "continue the forest" --output prompt.txt
+python scripts/image_extender_skill.py extend apply-result --original base.png --generated generated.png --direction right --amount 512 --output final.png
 ```
 
 ## 验收
