@@ -14,6 +14,7 @@ from image_extender_studio.core.constants import (
 )
 
 
+@dataclass
 class SpriteAlignmentOptions:
     """保存 sprite 单帧归一化的可调参数。
 
@@ -29,6 +30,7 @@ class SpriteAlignmentOptions:
     col_min_pixels: int = 0
 
 
+@dataclass
 class ProviderConfig:
     """保存单类能力最终解析出的 provider 配置。"""
 
