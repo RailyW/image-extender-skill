@@ -15,6 +15,8 @@ Do not rewrite chroma key logic in the model response.
 
 Do not rewrite manifest logic in the model response.
 
+Do not create final artwork with local placeholder drawing.
+
 Call the Python runner for fixed steps.
 
 Good:
@@ -29,6 +31,7 @@ Bad:
 ```text
 Describe how to crop the tiles manually.
 Skip the runner.
+Draw a simple placeholder and present it as final art.
 ```
 
 ## When To Use
@@ -248,15 +251,28 @@ Use this path when the user asks for Codex image generation.
 Use this path when no external image provider key exists.
 
 1. Generate a prompt file with the runner.
-2. Call `$imagegen`.
-3. Save the generated image.
-4. Run deterministic post-processing.
-5. Return the manifest.
+2. Attach required reference images for the selected workflow.
+3. Call `$imagegen`.
+4. Save the generated image.
+5. Run deterministic post-processing.
+6. Return the manifest.
+
+For sprite sheets, attach the anchor image.
+
+For sprite sheets, attach the pose guide image.
+
+For sprite sheets, use the exact runner prompt.
+
+Do not replace the runner prompt with a hand-written prompt.
+
+Do not use local fallback art as final sprite art.
 
 Good:
 
 ```text
-Run `prompt generate --emit codex`.
+Run `prompt generate --mode sprite-sheet`.
+Attach `anchor.png`.
+Attach `pose-guide.png`.
 Call `$imagegen`.
 Run `sprite process`.
 ```
@@ -265,6 +281,8 @@ Bad:
 
 ```text
 Call a HTTP provider after the user asked for Codex imagegen.
+Call `$imagegen` with text only for a sprite sheet.
+Draw a placeholder sprite with Pillow.
 ```
 
 ## Final Checks
