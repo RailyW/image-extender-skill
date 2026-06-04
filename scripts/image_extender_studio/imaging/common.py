@@ -44,19 +44,83 @@ def clamp(value: float) -> int:
 
 
 def chroma_key_image(image: Any, threshold: int = 80, feather: int = 24) -> Any:
-    """把纯洋红背景转成透明，并对近似洋红做软 alpha。"""
+    """把洋红背景转成透明，并对近似洋红做软 alpha。"""
     result = image.copy()
     pix = result.load()
+    clear_connected_magenta_background(pix, result.width, result.height, threshold)
     for y in range(result.height):
         for x in range(result.width):
             r, g, b, a = pix[x, y]
             magenta_score = max(0, r - 180) + max(0, b - 180) + max(0, 90 - g)
             if r > 200 and b > 200 and g < threshold:
-                pix[x, y] = (r, g, b, 0)
+                pix[x, y] = (0, 0, 0, 0)
             elif magenta_score > 120:
                 alpha = clamp(a * max(0, 1 - magenta_score / max(1, 360 + feather)))
-                pix[x, y] = (r, g, b, alpha)
+                pix[x, y] = (r, g, b, alpha) if alpha else (0, 0, 0, 0)
     return result
+
+
+def clear_connected_magenta_background(
+    pix: Any, width: int, height: int, threshold: int
+) -> None:
+    """清除从边界连通进来的近似洋红背景。
+
+    生成模型有时会把 #FF00FF 背景渲成轻微渐变。只扩大全局阈值会误伤
+    角色身上的紫色装饰，因此这里只对边界连通区域使用宽松判定。
+    """
+    if width <= 0 or height <= 0:
+        return
+
+    visited = bytearray(width * height)
+    stack: list[tuple[int, int]] = []
+
+    def push(x: int, y: int) -> None:
+        index = y * width + x
+        if not visited[index]:
+            visited[index] = 1
+            stack.append((x, y))
+
+    for x in range(width):
+        push(x, 0)
+        if height > 1:
+            push(x, height - 1)
+    for y in range(1, height - 1):
+        push(0, y)
+        if width > 1:
+            push(width - 1, y)
+
+    while stack:
+        x, y = stack.pop()
+        if not is_background_magenta(pix[x, y], threshold):
+            continue
+        pix[x, y] = (0, 0, 0, 0)
+        if x > 0:
+            push(x - 1, y)
+        if x + 1 < width:
+            push(x + 1, y)
+        if y > 0:
+            push(x, y - 1)
+        if y + 1 < height:
+            push(x, y + 1)
+
+
+def is_background_magenta(
+    pixel: tuple[int, int, int, int], threshold: int
+) -> bool:
+    """判断像素是否足够像洋红背景。"""
+    r, g, b, a = pixel
+    if a == 0:
+        return True
+    if r > 200 and b > 200 and g < threshold:
+        return True
+    return (
+        r >= 180
+        and b >= 160
+        and g <= max(130, threshold + 50)
+        and r - g >= 110
+        and b - g >= 90
+        and abs(r - b) <= 90
+    )
 
 
 def make_horizontally_tileable(image: Any, band: int = 64) -> Any:
