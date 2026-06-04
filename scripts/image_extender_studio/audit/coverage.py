@@ -10,6 +10,11 @@ from pathlib import Path
 from typing import Any
 
 
+def _contains_han(text: str) -> bool:
+    """判断文本中是否含有中文汉字，用于约束 Skill 正文 Markdown。"""
+    return any("\u4e00" <= char <= "\u9fff" for char in text)
+
+
 def _candidate_roots(root_path: Path) -> tuple[str, list[str], Path]:
     """识别 standalone skill 与 monorepo skill 两种常见目录布局。"""
     standalone_script = root_path / "scripts" / "image_extender_skill.py"
@@ -62,6 +67,21 @@ def audit_coverage(root: str) -> dict[str, Any]:
         f"{prefix}scripts/image_extender_studio/audit/README.md",
     ]
     missing = [path for path in required_files if not (root_path / path).exists()]
+    skill_markdown_files = [
+        f"{prefix}SKILL.md",
+        f"{prefix}references/feature-map.md",
+        f"{prefix}references/provider-config.md",
+        f"{prefix}references/subskill-extender.md",
+        f"{prefix}references/subskill-parallax.md",
+        f"{prefix}references/subskill-tileset.md",
+        f"{prefix}references/subskill-sprite.md",
+        f"{prefix}references/subskill-props.md",
+    ]
+    skill_markdown_with_chinese = []
+    for path in skill_markdown_files:
+        file_path = root_path / path
+        if file_path.exists() and _contains_han(file_path.read_text(encoding="utf-8")):
+            skill_markdown_with_chinese.append(path)
 
     # 兼容工程化拆分后的包结构：关键能力不再要求集中出现在入口脚本中。
     script_text = ""
@@ -86,10 +106,11 @@ def audit_coverage(root: str) -> dict[str, Any]:
         "codex-app-imagegen",
     ]
     missing_terms = [term for term in required_terms if term not in script_text]
-    ok = not missing and not missing_terms
+    ok = not missing and not missing_terms and not skill_markdown_with_chinese
     return {
         "ok": ok,
         "layout": layout,
         "missing_files": missing,
         "missing_script_terms": missing_terms,
+        "skill_markdown_with_chinese": skill_markdown_with_chinese,
     }

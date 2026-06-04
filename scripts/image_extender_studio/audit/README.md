@@ -4,7 +4,7 @@
 
 ## 包含文件
 
-- `coverage.py`：识别 standalone / monorepo 两种布局，检查必要文件、模块 README 和关键函数名。它会检查 `.gitignore`，但不会要求被忽略的本地 `AGENTS.md` 出现在分发仓库中。
+- `coverage.py`：识别 standalone / monorepo 两种布局，检查必要文件、模块 README 和关键函数名。它会检查 `.gitignore`，但不会要求被忽略的本地 `AGENTS.md` 出现在分发仓库中。它也会检查 `SKILL.md` 与 `references/*.md` 是否残留中文正文，确保 Skill 正文 Markdown 遵守英文规则。
 
 ## 修改规则
 

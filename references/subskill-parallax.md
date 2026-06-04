@@ -1,34 +1,120 @@
-# 子流程：Parallax 视差背景
+# Workflow: Parallax Background
 
-## 输入
+Priority: High.
 
-- 世界 / 场景 prompt。
-- 可选 art style。
-- 目标宽度。
-- 四层：`near`、`mid`、`far`、`sky`。
+Use this workflow for side-view parallax backgrounds.
 
-## 标准流程
+Build four layers.
 
-1. 调用 `parallax init` 创建四层 manifest。
-2. 用 `text call` 或 `prompt scene-brief` 生成共享 scene brief。
-3. 按 `near → mid → far → sky` 生成图层 prompt。
-4. 非 sky 图层调用 `parallax key-layer` 进行洋红色透明化。
-5. 需要更宽时调用 `parallax auto-plan` 规划多次横向扩图，再用 Extender 子流程执行。
-6. 调用 `parallax tileable` 修复水平循环点。
-7. 调用 `parallax harmonize` 平滑多次扩展造成的面板色漂。
-8. 调用 `parallax package` 导出 ZIP 和 `parallax.json`。
+Do not merge all layers into one image.
 
-## 关键命令
+Good:
 
-```bash
-python3 scripts/image_extender_skill.py parallax init --output parallax.json
-python3 scripts/image_extender_skill.py prompt generate --mode parallax --layer near --prompt "crystal forest" --scene-brief brief.txt --output near-prompt.txt
-python3 scripts/image_extender_skill.py parallax key-layer --input near-raw.png --role near --output near.png
-python3 scripts/image_extender_skill.py parallax package --manifest parallax.json --output parallax.zip
+```text
+Create `near`, `mid`, `far`, and `sky`.
+Package the manifest.
 ```
 
-## 验收
+Bad:
 
-- `sky` 保持不透明。
-- `far` / `mid` / `near` 透明背景来自色键处理。
-- ZIP 包含所有已生成图层和 `parallax.json`。
+```text
+Generate one flat background and stop.
+```
+
+## Inputs
+
+Priority: High.
+
+Collect these inputs.
+
+- World prompt.
+- Optional art style.
+- Target width.
+- Layer roles: `near`, `mid`, `far`, and `sky`.
+
+Good:
+
+```text
+Use `near` as the first visual anchor.
+```
+
+Bad:
+
+```text
+Skip the shared scene brief.
+```
+
+## Standard Flow
+
+Priority: High.
+
+1. Run `parallax init`.
+2. Generate a shared scene brief.
+3. Generate layer prompts in this order: `near`, `mid`, `far`, `sky`.
+4. Run `parallax key-layer` for non-sky layers.
+5. Run `parallax auto-plan` when more width is needed.
+6. Use the Extender workflow for planned extensions.
+7. Run `parallax tileable`.
+8. Run `parallax harmonize`.
+9. Run `parallax package`.
+
+Good:
+
+```bash
+python scripts/image_extender_skill.py parallax init --output parallax.json
+python scripts/image_extender_skill.py prompt generate --mode parallax --layer near --prompt "crystal forest" --scene-brief brief.txt --output near-prompt.txt
+python scripts/image_extender_skill.py parallax key-layer --input near-raw.png --role near --output near.png
+python scripts/image_extender_skill.py parallax package --manifest parallax.json --output parallax.zip
+```
+
+Bad:
+
+```bash
+python scripts/image_extender_skill.py parallax package --manifest missing.json --output parallax.zip
+```
+
+## Layer Rules
+
+Priority: High.
+
+Keep `sky` opaque.
+
+Key `far`, `mid`, and `near`.
+
+Use pure `#FF00FF` as the removable background for non-sky layers.
+
+Good:
+
+```text
+Run `parallax key-layer` for `near`.
+Do not run it for `sky`.
+```
+
+Bad:
+
+```text
+Make the sky transparent.
+```
+
+## Acceptance
+
+Priority: High.
+
+Check these outputs.
+
+- `sky` is opaque.
+- `far`, `mid`, and `near` have transparent backgrounds.
+- The ZIP includes generated layers.
+- The ZIP includes `parallax.json`.
+
+Good:
+
+```text
+Return `parallax.zip` and `parallax.json`.
+```
+
+Bad:
+
+```text
+Return only one layer image.
+```

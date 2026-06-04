@@ -101,6 +101,7 @@ python scripts/image_extender_skill.py audit coverage --root .
 - 新增功能时同步更新 `README.md`、`SKILL.md` 和相关模块 README。
 - 所有临时 TDD 或验证测试放到 `.codex-tdd-tests/`，该目录已被 `.gitignore` 忽略。
 - `AGENTS.md` 是本地协作规则文件，已被 `.gitignore` 忽略，不进入仓库历史。
+- `SKILL.md` 和 `references/*.md` 属于 Skill 正文 Markdown，必须使用英文；`audit coverage` 会检查是否残留中文。
 - 不要提交真实 API key；provider key 只通过环境变量、命令行参数或本地私有配置传入。
 
 ## 灵感来源

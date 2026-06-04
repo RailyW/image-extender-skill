@@ -5,66 +5,192 @@ description: "Use this skill to run the Image Extender workflows inside Codex in
 
 # Image Extender Studio Skill
 
-本 Skill 把原 Web 工作台拆成 Codex 可执行工作流：Markdown 负责编排和选择路径，`scripts/image_extender_skill.py` 保持兼容入口，实际实现位于 `scripts/image_extender_studio/` 包。不要让 LLM 临场重写切图、色键、导出、manifest 或 provider 适配逻辑；这些步骤必须调用脚本。
+Priority: High.
 
-## 何时使用
+Use this skill for deterministic 2D game art workflows.
 
-当用户要做以下任一任务时使用本 Skill：
+Do not rewrite image slicing logic in the model response.
 
-- 扩展图片边缘或做 outpainting。
-- 生成横版游戏视差背景，并导出图层包。
-- 生成 2D 平台游戏 autotile 瓦片集。
-- 生成角色或生物 sprite 动画表。
-- 生成透明装饰 props 库。
-- 把原 Image Extender Web 工作台能力迁移到 Codex App 中执行。
+Do not rewrite chroma key logic in the model response.
 
-## 固定执行原则
+Do not rewrite manifest logic in the model response.
 
-1. 先读取用户需求，确定目标子流程：`extender`、`parallax`、`tileset`、`sprite`、`props`。
-2. 对 provider 做显式选择：自定义 provider / BYOK / Codex App `imagegen`。
-3. 所有固定步骤都调用 Python 脚本：prompt 生成、provider JSON、画布扩展、Poisson/羽化融合、色键、切图、guide 生成、对齐、打包、manifest。
-4. 当选择 Codex App `imagegen` 时，先用脚本生成稳定 prompt，再调用 `$imagegen` 生成图片，最后把生成图片交回脚本后处理。
-5. 输出必须包含可交付文件路径、manifest 和用户下一步可直接使用的资源。
+Call the Python runner for fixed steps.
 
-## Provider 模式
+Good:
 
-读取 [provider-config.md](references/provider-config.md) 选择 provider。默认推荐：
+```text
+Run `python scripts/image_extender_skill.py tileset extract`.
+Then report the output files.
+```
 
-- `image`：OpenRouter chat image、OpenAI Responses、OpenAI Images，或 Codex App `imagegen`。
-- `text`：OpenAI-compatible chat 或 Responses，用于 scene brief / prop ideas。
-- `vision`：OpenAI-compatible chat 或 Responses，用于 tile / sprite QA。
+Bad:
 
-密钥只通过环境变量、命令行参数或用户提供的本地配置传入；不要把密钥写入仓库。脚本支持与 Web app 相同的三类能力分槽配置。
+```text
+Describe how to crop the tiles manually.
+Skip the runner.
+```
 
-## 子流程导航
+## When To Use
 
-按任务读取对应参考文件：
+Priority: High.
 
-- Extender 扩图：读 [subskill-extender.md](references/subskill-extender.md)。
-- Parallax 视差背景：读 [subskill-parallax.md](references/subskill-parallax.md)。
-- Tileset 自动瓦片：读 [subskill-tileset.md](references/subskill-tileset.md)。
-- Sprite 动画：读 [subskill-sprite.md](references/subskill-sprite.md)。
-- Props 装饰库：读 [subskill-props.md](references/subskill-props.md)。
-- 功能覆盖审计：读 [feature-map.md](references/feature-map.md)。
+Use this skill when the user asks for any listed workflow.
 
-## 工程化模块导航
+- Extend image edges.
+- Run AI outpainting.
+- Generate parallax background layers.
+- Generate 2D autotiles.
+- Generate sprite animation sheets.
+- Generate transparent prop libraries.
+- Move Image Extender web workflows into Codex.
 
-Python 实现已经按职责拆分：
+Good:
 
-- `scripts/image_extender_skill.py`：兼容入口，只负责调用包内 CLI。
-- `scripts/image_extender_studio/core/`：常量、数据模型和通用 IO。
-- `scripts/image_extender_studio/providers/`：BYOK / 自定义 provider 协议适配。
-- `scripts/image_extender_studio/prompts/`：各子流程稳定 prompt 构造。
-- `scripts/image_extender_studio/imaging/`：跨工作流复用的像素和打包工具。
-- `scripts/image_extender_studio/workflows/`：extender、parallax、tileset、sprite、props 的确定性处理流程。
-- `scripts/image_extender_studio/cli/`：命令树与命令分派。
-- `scripts/image_extender_studio/audit/`：文件结构和关键能力覆盖审计。
+```text
+The user asks for a parallax forest background.
+Read `references/subskill-parallax.md`.
+```
 
-新增或修改功能时，同步更新根 `README.md`、本 `SKILL.md`、对应 `references/subskill-*.md` 和相关模块 README。
+Bad:
 
-## 常用脚本入口
+```text
+The user asks for a sprite sheet.
+Answer with only a prompt.
+```
 
-所有命令都从 skill 目录运行，或显式传入脚本绝对路径：
+## Core Flow
+
+Priority: High.
+
+1. Read the user request.
+2. Choose one workflow.
+3. Choose the provider path.
+4. Generate stable prompts with the runner.
+5. Generate images with the selected provider.
+6. Run deterministic post-processing with the runner.
+7. Return files, manifests, and next actions.
+
+Good:
+
+```text
+Choose `sprite`.
+Generate the prompt.
+Call image generation.
+Run `sprite process`.
+Run `sprite package`.
+```
+
+Bad:
+
+```text
+Generate a sprite prompt.
+Stop before post-processing.
+```
+
+## Provider Path
+
+Priority: High.
+
+Read [provider-config.md](references/provider-config.md).
+
+Choose one image path.
+
+- Use `openrouter-chat-completions` for OpenRouter chat image models.
+- Use `openai-responses` for Responses image generation.
+- Use `openai-images` for text-to-image only.
+- Use `codex-app-imagegen` when the user wants Codex image generation.
+
+Choose one text path.
+
+- Use chat completions for scene briefs.
+- Use Responses for scene briefs when configured.
+
+Choose one vision path.
+
+- Use chat completions for tile review.
+- Use chat completions for sprite review.
+
+Do not write API keys into the repository.
+
+Good:
+
+```text
+Read `providers.local.json`.
+Resolve `image`, `text`, and `vision`.
+Validate with `providers validate`.
+```
+
+Bad:
+
+```text
+Paste an API key into `SKILL.md`.
+Commit a provider file with secrets.
+```
+
+## Workflow References
+
+Priority: High.
+
+Read one reference file for the selected workflow.
+
+- Extender: [subskill-extender.md](references/subskill-extender.md).
+- Parallax: [subskill-parallax.md](references/subskill-parallax.md).
+- Tileset: [subskill-tileset.md](references/subskill-tileset.md).
+- Sprite: [subskill-sprite.md](references/subskill-sprite.md).
+- Props: [subskill-props.md](references/subskill-props.md).
+- Coverage audit: [feature-map.md](references/feature-map.md).
+
+Good:
+
+```text
+For a tileset request, read only `subskill-tileset.md` first.
+```
+
+Bad:
+
+```text
+Load every reference file before choosing a workflow.
+```
+
+## Python Modules
+
+Priority: Medium.
+
+Use the compatibility runner.
+
+The runner path is `scripts/image_extender_skill.py`.
+
+The implementation package is `scripts/image_extender_studio/`.
+
+Use the module map.
+
+- `core`: constants, dataclasses, and file utilities.
+- `providers`: BYOK and provider protocols.
+- `prompts`: prompt builders.
+- `imaging`: shared pixel tools.
+- `workflows`: deterministic workflow steps.
+- `cli`: argument parsing and command dispatch.
+- `audit`: structure and coverage checks.
+
+Good:
+
+```text
+Add a new user command in `cli/parser.py`.
+Put image logic in `workflows/` or `imaging/`.
+```
+
+Bad:
+
+```text
+Put a new algorithm into `scripts/image_extender_skill.py`.
+```
+
+## Common Commands
+
+Priority: Medium.
+
+Run commands from the skill root.
 
 ```bash
 python scripts/image_extender_skill.py --help
@@ -74,26 +200,78 @@ python scripts/image_extender_skill.py tileset guide --output outputs/tile-guide
 python scripts/image_extender_skill.py sprite process --sheet generated.png --body-plan biped --anim idle --output-dir outputs/sprite --vertical-anchor baseline --horizontal-anchor upper-q75
 ```
 
-图像后处理命令需要 Pillow；Codex App 的内置 Python 通常可用，普通系统 Python 缺少时脚本会给出安装提示。
+Good:
 
-## Agents 自动安装提示词
+```text
+Run the exact command.
+Report the manifest path.
+```
 
-当用户希望把安装工作交给另一个尚未安装本 Skill 的 agent 时，让用户复制根 [README.md](README.md) 中的“复制给 Agents 自动安装”整段文本。那段文本本身就是功能入口，不依赖任何本仓库脚本或 `$image-extender-studio` 已存在；它会指示对方 agent 直接从仓库获取内容并复制到自己的 skill 目录。
+Bad:
 
-## Codex App imagegen 路径
+```text
+Invent a new command name.
+Omit the output directory.
+```
 
-如果用户要求“直接在 Codex App 中调用 image gen”，或没有外部 provider key：
+## Agent Installation Text
 
-1. 用 `prompt generate` / `prompt extend` / 对应子命令生成稳定 prompt 文件。
-2. 调用 `$imagegen`，让 Codex App 生成位图。
-3. 将生成图片保存到输出目录。
-4. 用 `tileset extract`、`sprite process`、`props process`、`parallax package` 或 `extend apply-result` 完成确定性后处理。
+Priority: Medium.
 
-Python 脚本不能直接调用 Codex App 的工具，因此 Skill 的 Markdown 编排负责调用 `$imagegen`，脚本负责准备 prompt 与后处理。
+Use the top section of [README.md](README.md).
 
-## 结束前检查
+Copy the full installation text to another agent.
 
-交付前至少执行：
+The other agent may not have this skill installed.
+
+Do not ask it to call `$image-extender-studio`.
+
+Good:
+
+```text
+Copy the README installation block.
+Ask the other agent to clone the repository.
+```
+
+Bad:
+
+```text
+Ask the other agent to run this skill before installing it.
+```
+
+## Codex App Imagegen Path
+
+Priority: High.
+
+Use this path when the user asks for Codex image generation.
+
+Use this path when no external image provider key exists.
+
+1. Generate a prompt file with the runner.
+2. Call `$imagegen`.
+3. Save the generated image.
+4. Run deterministic post-processing.
+5. Return the manifest.
+
+Good:
+
+```text
+Run `prompt generate --emit codex`.
+Call `$imagegen`.
+Run `sprite process`.
+```
+
+Bad:
+
+```text
+Call a HTTP provider after the user asked for Codex imagegen.
+```
+
+## Final Checks
+
+Priority: High.
+
+Run these checks before reporting completion.
 
 ```bash
 python -m compileall -q scripts
@@ -101,4 +279,17 @@ python scripts/image_extender_skill.py audit coverage --root .
 python scripts/image_extender_skill.py --help
 ```
 
-若修改了原 Web 应用代码，再额外运行项目构建命令。
+Also check for non-English skill markdown text.
+
+Good:
+
+```text
+Run the checks.
+Report failures honestly.
+```
+
+Bad:
+
+```text
+Say the work is complete without running checks.
+```

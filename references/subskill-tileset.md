@@ -1,31 +1,123 @@
-# 子流程：Tileset 自动瓦片
+# Workflow: Tileset
 
-## 输入
+Priority: High.
 
-- 材质 prompt。
-- 可选 scene brief、art style、tile fix notes。
+Use this workflow for 2D platformer autotiles.
 
-## 标准流程
+Do not crop autotiles manually.
 
-1. 调用 `tileset guide` 生成 8×8 结构参考图。
-2. 调用 `prompt generate --mode tileset` 生成图生图 prompt。
-3. 用 HTTP provider 或 Codex App `imagegen` 生成 restyled guide。
-4. 调用 `tileset extract` 从固定采样格切出 13 个角色。
-5. 调用 `tileset reconcile` 调和角块和边缘。
-6. 调用 `tileset package` 生成带 2px extrude 的 atlas、单块 PNG 和 manifest。
-7. 如果启用 vision QA，调用 `prompt review --kind tile` 与 `review call`，失败时把 fix notes 传回第 2 步。
+Use the guide image.
 
-## 关键命令
+Good:
 
-```bash
-python3 scripts/image_extender_skill.py tileset guide --output tile-guide.png
-python3 scripts/image_extender_skill.py prompt generate --mode tileset --prompt "mossy stone with small roots" --output tile-prompt.txt
-python3 scripts/image_extender_skill.py tileset extract --sheet generated.png --output-dir tileset
-python3 scripts/image_extender_skill.py tileset package --input-dir tileset --output tileset.zip
+```text
+Generate a guide.
+Restyle the guide.
+Extract tiles with the runner.
 ```
 
-## 验收
+Bad:
 
-- 13 个角色文件齐全。
-- atlas 有 4×4 布局和 2px extrude。
-- manifest 记录 role、文件名、坐标、tile size。
+```text
+Ask the model to describe tile coordinates.
+```
+
+## Inputs
+
+Priority: High.
+
+Collect these inputs.
+
+- Material prompt.
+- Optional art style.
+- Optional scene brief.
+- Optional QA fix notes.
+
+Good:
+
+```text
+Use `mossy stone with roots` as the material prompt.
+```
+
+Bad:
+
+```text
+Use a vague prompt such as `nice tiles`.
+```
+
+## Standard Flow
+
+Priority: High.
+
+1. Run `tileset guide`.
+2. Run `prompt generate --mode tileset`.
+3. Generate or edit the guide image.
+4. Run `tileset extract`.
+5. Run `tileset reconcile`.
+6. Run `tileset package`.
+7. Run review when a vision provider is available.
+
+Good:
+
+```bash
+python scripts/image_extender_skill.py tileset guide --output tile-guide.png
+python scripts/image_extender_skill.py prompt generate --mode tileset --prompt "mossy stone with small roots" --output tile-prompt.txt
+python scripts/image_extender_skill.py tileset extract --sheet generated.png --output-dir tileset
+python scripts/image_extender_skill.py tileset package --input-dir tileset --output tileset.zip
+```
+
+Bad:
+
+```bash
+python scripts/image_extender_skill.py tileset package --input-dir empty --output tileset.zip
+```
+
+## Tile Rules
+
+Priority: High.
+
+Keep the guide silhouette.
+
+Keep pure `#FF00FF` for transparent regions.
+
+Avoid pink material colors.
+
+Make the body tile repeatable.
+
+Good:
+
+```text
+Use gray guide pixels as material.
+Preserve magenta pixels for keying.
+```
+
+Bad:
+
+```text
+Paint magenta flowers inside the material.
+```
+
+## Acceptance
+
+Priority: High.
+
+Check these outputs.
+
+- Tile PNG files exist.
+- `tileset.json` exists.
+- `manifest.json` exists.
+- `tileset-atlas.png` exists.
+- The ZIP includes the atlas and manifest.
+
+Good:
+
+```text
+Return `tileset.zip`.
+List the atlas path.
+```
+
+Bad:
+
+```text
+Return only the generated sheet.
+```

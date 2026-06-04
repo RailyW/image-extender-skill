@@ -1,29 +1,126 @@
-# Provider 配置
+# Provider Configuration
 
-本 Skill 兼容三类能力分槽配置，保持 Web app 的 BYOK / 自定义 provider 设计：
+Priority: High.
 
-- `image`：图片生成、图生图、扩图、Tiles / Sprite / Props 绘制。
-- `text`：scene brief、prop ideas 等文本规划。
-- `vision`：tile review、sprite review 等带图评审。
+Use this file when choosing provider settings.
 
-## 支持协议
+Do not guess provider protocols.
 
-- `openrouter-chat-completions`：OpenRouter `/chat/completions`，图片请求会带 `modalities` 与 `image_config`。
-- `openai-chat-completions`：OpenAI-compatible `/chat/completions`，适合文本和视觉评审。
-- `openai-responses`：OpenAI Responses `/responses`，图片通过 `image_generation_call` 解析。
-- `openai-images`：OpenAI Images `/images/generations`，只适合纯文生图。
-- `codex-app-imagegen`：不走 HTTP。Skill 先生成 prompt，Codex 再调用 `$imagegen` 工具，随后脚本做后处理。
+Do not write secrets into repository files.
 
-## 配置方式
+Good:
 
-优先级从高到低：
+```text
+Load a local provider JSON file.
+Resolve each capability.
+Run `providers validate`.
+```
 
-1. CLI 参数：`--image-api-key`、`--text-api-key`、`--vision-api-key` 等。
-2. JSON 配置文件：`--config providers.local.json`。
-3. 环境变量：`IMAGE_PROVIDER_*`、`TEXT_PROVIDER_*`、`VISION_PROVIDER_*`。
-4. 兼容旧变量：`OPENROUTER_API_KEY`。
+Bad:
 
-配置示例：
+```text
+Paste an API key into a tracked markdown file.
+Use an unsupported protocol name.
+```
+
+## Capability Slots
+
+Priority: High.
+
+Use three capability slots.
+
+- `image`: image generation, image editing, outpainting, tiles, sprites, and props.
+- `text`: scene briefs and prop ideas.
+- `vision`: tile review and sprite review.
+
+Good:
+
+```json
+{
+  "image": {
+    "protocol": "openai-responses",
+    "base_url": "https://api.openai.com/v1",
+    "model": "gpt-image-2",
+    "api_key_env": "OPENAI_API_KEY"
+  }
+}
+```
+
+Bad:
+
+```json
+{
+  "all": {
+    "api_key": "real-secret-value"
+  }
+}
+```
+
+## Supported Protocols
+
+Priority: High.
+
+Use only supported protocol names.
+
+- `openrouter-chat-completions`
+- `openai-chat-completions`
+- `openai-responses`
+- `openai-images`
+- `codex-app-imagegen`
+
+Use `openrouter-chat-completions` for OpenRouter chat image models.
+
+Use `openai-chat-completions` for OpenAI-compatible text and vision calls.
+
+Use `openai-responses` for Responses text, vision, and image workflows.
+
+Use `openai-images` for text-to-image only.
+
+Use `codex-app-imagegen` when Codex must call `$imagegen`.
+
+Good:
+
+```text
+Use `openai-responses` for image edits with input images.
+```
+
+Bad:
+
+```text
+Use `openai-images` for an edit with input images.
+```
+
+## Resolution Order
+
+Priority: High.
+
+Apply this order.
+
+1. Read CLI arguments.
+2. Read environment variables.
+3. Read JSON configuration.
+4. Use legacy `OPENROUTER_API_KEY`.
+5. Use defaults only after explicit inputs are missing.
+
+Good:
+
+```text
+Pass `--image-model` to override the JSON model.
+```
+
+Bad:
+
+```text
+Ignore the CLI value because the JSON file has a model.
+```
+
+## Example Configuration
+
+Priority: Medium.
+
+Use this shape for local files.
+
+Do not commit files with real secrets.
 
 ```json
 {
@@ -48,4 +145,15 @@
 }
 ```
 
-不要提交包含真实 API key 的配置文件。
+Good:
+
+```text
+Store this as `providers.local.json`.
+Keep it untracked.
+```
+
+Bad:
+
+```text
+Commit `providers.local.json` with a real API key.
+```
