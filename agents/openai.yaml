@@ -1,0 +1,7 @@
+interface:
+  display_name: "Image Extender Studio"
+  short_description: "在 Codex 中编排完整 2D AI 游戏美术工作流"
+  brand_color: "#22C55E"
+  default_prompt: "Use $image-extender-studio to create a complete 2D game asset pack with custom providers or Codex imagegen."
+policy:
+  allow_implicit_invocation: true
